@@ -205,3 +205,24 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# 回到项目根目录
+cd ~/Desktop/a-try-of-OR
+
+# 打开 .gitignore 文件，添加以下内容（如果还没有）：
+cat >> .gitignore << 'EOF'
+
+# ========== Vue 前端 ==========
+/frontend/node_modules
+/frontend/dist
+/frontend/dist-ssr
+/frontend/.vite
+/frontend/.env
+/frontend/.env.*.local
+/frontend/*.log
+/frontend/*.tsbuildinfo
+/frontend/.DS_Store
+/frontend/.pnpm-store
+
+# 开发环境缓存
+.fronte/
