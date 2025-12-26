@@ -223,6 +223,3 @@ cat >> .gitignore << 'EOF'
 /frontend/*.tsbuildinfo
 /frontend/.DS_Store
 /frontend/.pnpm-store
-
-# 开发环境缓存
-.fronte/

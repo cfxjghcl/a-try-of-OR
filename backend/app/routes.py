@@ -18,3 +18,11 @@ def test_connection():
         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'status': 'connected'
     })
+
+@bp.route('/hybridation/zybTrackerstatisticsAction',methods=['GET'])
+def zyb_tracker_statistics():
+    return jsonify({'message': 'zybTrackerstatidsticsAction'})
+
+@bp.route('/favicon.ico')
+def favicon():
+    return send_from_directory(app.static_folder, 'favicon.ico',mimetype='image/vnd.microsoft.icon')
