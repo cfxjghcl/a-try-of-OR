@@ -1,0 +1,7 @@
+CREATE DATABASE IF NOT EXISTS jobviz CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE jobviz;
+CREATE TABLE IF NOT EXISTS tech_heat (
+    skill        VARCHAR(40) PRIMARY KEY,
+    heat         INT         NOT NULL DEFAULT 0,
+    updated_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
