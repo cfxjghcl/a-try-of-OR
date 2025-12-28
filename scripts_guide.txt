@@ -1,0 +1,253 @@
+本项目脚本使用手册
+
+
+最后更新: 2025-12-28
+适用版本: v1.0
+
+📁 目录结构
+===========
+
+项目根目录/
+├── scripts/                    # 项目级脚本目录
+│   ├── database/              # 数据库相关脚本
+│   ├── testing/               # 接口测试脚本
+│   ├── deployment/            # 部署脚本
+│   └── utils/                 # 工具脚本
+├── backend/scripts/           # 后端业务脚本
+├── deploy.bat                 # 一键部署入口
+└── run_tests.bat              # 一键测试入口
+
+==========
+
+如果你是第一次使用本项目，按以下步骤：
+
+1. 进入项目根目录
+   cd C:\Users\你的用户名\Desktop\OR
+
+2. 运行一键部署（选择开发环境）
+   deploy.bat
+   然后输入 "1" 并按回车
+
+3. 测试项目功能
+   run_tests.bat
+   按菜单选择测试类型
+
+这将启动：
+- 后端服务：http://localhost:5000
+- 前端服务：http://localhost:3000
+- 自动安装所需依赖
+
+ 主要脚本功能说明
+===================
+
+&&数据库相关脚本
+
+1. test_mysql.py - 测试MySQL连接
+   位置: scripts/database/test_mysql.py
+   功能: 测试数据库连接状态、查看数据库信息
+   用法: python scripts/database/test_mysql.py
+
+2. fix_mysql.py - 修复MySQL问题
+   位置: scripts/database/fix_mysql.py
+   功能: 修复MySQL常见问题（如双进程、服务无法启动）
+   用法: python scripts/database/fix_mysql.py
+         按菜单选择修复选项
+
+3. backup_db.py - 备份数据库
+   位置: scripts/database/backup_db.py
+   功能: 备份数据库到SQL文件
+   用法: python scripts/database/backup_db.py
+
+&&API测试脚本
+
+1. test_api.py - 测试后端API接口
+   位置: scripts/testing/test_api.py
+   功能: 测试后端所有API接口是否正常工作
+   用法: python scripts/testing/test_api.py
+         需先启动后端服务
+
+2. test_frontend.py - 测试前端页面
+   位置: scripts/testing/test_frontend.py
+   功能: 测试前端页面是否能正常访问
+   用法: python scripts/testing/test_frontend.py
+         需先启动前端服务
+
+&&工具脚本
+
+1. project_info.py - 查看项目信息
+   位置: scripts/utils/project_info.py
+   功能: 显示项目结构、关键文件状态、环境信息
+   用法: python scripts/utils/project_info.py
+
+2. check_deps.py - 检查依赖
+   位置: scripts/utils/check_deps.py
+   功能: 检查Python和Node.js依赖是否完整
+   用法: python scripts/utils/check_deps.py
+
+3. clean_logs.py - 清理日志
+   位置: scripts/utils/clean_logs.py
+   功能: 清理旧的日志文件，释放磁盘空间
+   用法: python scripts/utils/clean_logs.py
+
+&& 部署脚本
+
+1. deploy.bat - 开发环境部署
+   位置: scripts/deployment/deploy.bat
+   功能: 一键部署开发环境，启动前后端服务
+   用法: 双击运行 或 call scripts/deployment/deploy.bat
+
+2. deploy_prod.bat - 生产环境部署
+   位置: scripts/deployment/deploy_prod.bat
+   功能: 将项目部署为Windows服务，开机自启
+   用法: 右键"以管理员身份运行"
+         注意：需要管理员权限
+
+3. create_configs.py - 生成配置文件
+   位置: scripts/deployment/create_configs.py
+   功能: 生成各种部署配置文件（Docker、Nginx等）
+   用法: python scripts/deployment/create_configs.py
+         按菜单选择配置类型
+
+&&一键脚本
+
+1. deploy.bat - 一键部署菜单
+   -------------------------
+   双击运行 deploy.bat，出现菜单：
+   1. 开发环境部署（本地运行）
+   2. 生产环境部署（Windows服务）
+   3. 仅部署后端
+   4. 仅部署前端
+   5. 卸载服务
+   6. 退出
+
+   推荐选择1进行开发环境部署。
+
+2. run_tests.bat - 一键测试菜单
+   ----------------------------
+   双击运行 run_tests.bat，出现菜单：
+   1. 数据库连接测试
+   2. API接口测试
+   3. 完整测试（数据库+API）
+   4. 查看项目信息
+   5. 退出
+
+   推荐选择3进行完整测试。
+
+&&故障排除
+
+问题1: MySQL连接失败
+-------------------
+症状: 数据库连接错误，后端启动失败
+解决:
+   1. 运行修复脚本: python scripts/database/fix_mysql.py
+   2. 选择"1"修复MySQL服务
+   3. 测试连接: python scripts/database/test_mysql.py
+
+问题2: Python依赖缺失
+--------------------
+症状: ModuleNotFoundError, ImportError
+解决:
+   1. 重新安装依赖:
+      cd backend
+      pip install -r requirements.txt
+   2. 如果无requirements.txt，安装基础包:
+      pip install pymysql flask flask-sqlalchemy flask-cors
+
+问题3: 端口被占用
+----------------
+症状: Address already in use, 端口冲突
+解决:
+   1. 查看占用端口的进程:
+      netstat -ano | findstr :5000
+   2. 结束进程（如果是无用进程）:
+      taskkill /F /PID [进程ID]
+   3. 或者修改端口:
+      在backend/app/__init__.py中修改app.run(port=5001)
+
+问题4: 前端无法启动
+-----------------
+症状: npm错误, 前端页面空白
+解决:
+   1. 安装Node.js依赖:
+      cd frontend
+      npm install
+   2. 清除缓存重新安装:
+      rm -rf node_modules package-lock.json
+      npm cache clean --force
+      npm install
+
+&&开发工作
+
+日常开发流程:
+1. 启动开发环境: deploy.bat → 选择1
+2. 修改代码后测试: run_tests.bat → 选择3
+3. 同步数据: python backend/scripts/first_sync.py
+4. 查看日志: 查看backend/logs/flask.log
+
+部署到生产环境:
+1. 生成配置文件: python scripts/deployment/create_configs.py
+2. 部署生产环境: deploy.bat → 选择2 (需要管理员权限)
+3. 验证部署: 访问 http://localhost:5000
+
+&&后端业务脚本
+
+注意: 以下脚本在backend/scripts/目录，是业务逻辑脚本，请勿删除。
+
+1. first_sync.py - 首次数据同步
+   功能: 从OpenDigger获取初始数据
+   用法: python backend/scripts/first_sync.py
+
+2. opendigger_cron.py - 定时任务
+   功能: 定时更新技术栈热度数据
+   用法: python backend/scripts/opendigger_cron.py
+         建议配置为Windows计划任务
+
+3. scrapy_crawl.py - 爬虫数据采集
+   功能: 从招聘网站爬取岗位数据
+   用法: python backend/scripts/scrapy_crawl.py
+
+
+&&环境要求
+
+系统要求:
+- Windows 10/11 (已测试)
+- Python 3.8+ (建议3.10)
+- MySQL 8.0+ (数据库)
+- Node.js 16+ (前端需要)
+
+Python包要求:
+- Flask>=2.3.0
+- Flask-SQLAlchemy>=3.0.0
+- Flask-CORS>=4.0.0
+- PyMySQL>=1.1.0
+- opendigger-pycli>=0.1.0
+- requests>=2.28.0
+
+&&重要注意事项
+1. 脚本权限
+   - 普通脚本: 直接双击运行
+   - 部署脚本: deploy_prod.bat需要管理员权限
+   - 生产环境脚本: 修改前请备份
+
+2. 路径问题
+   - 所有脚本都应在项目根目录运行
+   - 脚本使用相对路径，请勿移动脚本位置
+   - 如果需要移动，更新脚本内的路径变量
+
+3. 数据库安全
+   - 生产环境请修改默认密码(123456)
+   - 定期备份数据库
+   - 不要将数据库密码提交到Git
+
+4. 文件备份
+   - 部署前备份重要配置文件
+   - 数据库文件备份: scripts/database/backup_db.py
+   - 项目代码备份: git commit 或 手动复制
+
+5. 日志文件
+   - 日志位置: backend/logs/
+   - 主要日志:
+        flask.log - Flask应用日志
+        cron.log - 定时任务日志
+        error.log - 错误日志
+   - 定期清理: python scripts/utils/clean_logs.py
