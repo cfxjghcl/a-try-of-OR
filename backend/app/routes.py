@@ -53,7 +53,7 @@ def get_tech_heat():
             'record_count': len(rows),
             'data': rows,
             'timestamp': datetime.now().isoformat()
-        })
+            })
         
     except Exception as error:
         return jsonify({
