@@ -15,4 +15,18 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    // 代理配置，解决CORS问题
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, '')
+      }
+    },
+    // 只监听localhost，避免防火墙警告（校园网更安全）
+    host: 'localhost',
+    port: 5173,
+    open: false
+  }
 })

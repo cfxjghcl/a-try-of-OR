@@ -1,114 +1,143 @@
 <template>
-  <div ref="chartRef" style="width: 100%; height: 600px;"></div>
+  <div style="padding: 20px;">
+    <h1>技术栈热度可视化</h1>
+    
+    <div v-if="loading" style="text-align: center; padding: 50px;">
+      <div>加载中...</div>
+    </div>
+    
+    <div v-else>
+      <div v-if="techData.length === 0" style="color: #666; text-align: center; padding: 50px;">
+        暂无数据
+      </div>
+      
+      <div v-else>
+        <!-- 统计信息 -->
+        <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+          <div style="display: flex; justify-content: space-around; text-align: center;">
+            <div>
+              <div style="font-size: 12px; color: #666;">技术栈总数</div>
+              <div style="font-size: 24px; font-weight: bold;">{{ techData.length }}</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: #666;">最高热度</div>
+              <div style="font-size: 24px; font-weight: bold;">{{ maxHeat }}</div>
+            </div>
+            <div>
+              <div style="font-size: 12px; color: #666;">平均热度</div>
+              <div style="font-size: 24px; font-weight: bold;">{{ avgHeat.toFixed(2) }}</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 词云 -->
+        <TechCloud :data="techData" />
+        
+        <!-- 数据表格 -->
+        <div style="margin-top: 30px;">
+          <h3>详细数据</h3>
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+              <thead>
+                <tr style="background: #f5f5f5;">
+                  <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">排名</th>
+                  <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">技术栈</th>
+                  <th style="padding: 12px; border: 1px solid #ddd; text-align: center;">热度</th>
+                  <th style="padding: 12px; border: 1px solid #ddd; text-align: left;">更新时间</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr 
+                  v-for="(item, index) in sortedData" 
+                  :key="item.skill"
+                  :style="{ backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white' }"
+                >
+                  <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold;">{{ index + 1 }}</td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">
+                    <a 
+                      :href="`https://github.com/${item.skill}`" 
+                      target="_blank"
+                      style="color: #0366d6; text-decoration: none;"
+                    >
+                      {{ item.skill }}
+                    </a >
+                  </td>
+                  <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">
+                    <span :style="{ 
+                      color: item.heat >= 2 ? '#ff4757' : '#a4b0be', 
+                      fontWeight: 'bold' 
+                    }">
+                      {{ item.heat }}
+                    </span>
+                  </td>
+                  <td style="padding: 10px; border: 1px solid #ddd;">
+                    {{ formatDate(item.updated_at) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
-import * as echarts from 'echarts'
-import 'echarts-wordcloud'
+import TechCloud from '@/components/TechCloud.vue';
+import { getTechHeat } from '@/api/tech';
 
 export default {
-  name: 'TechCloud',
-  props: {
-    data: {
-      type: Array,
-      default: () => []
+  name: 'TechView',
+  components: {
+    TechCloud
+  },
+  data() {
+    return {
+      loading: true,
+      techData: []
+    };
+  },
+  computed: {
+    sortedData() {
+      return [...this.techData].sort((a, b) => b.heat - a.heat);
+    },
+    maxHeat() {
+      return Math.max(...this.techData.map(item => item.heat));
+    },
+    avgHeat() {
+      const sum = this.techData.reduce((acc, item) => acc + item.heat, 0);
+      return sum / this.techData.length;
     }
   },
-  mounted() {
-    this.$nextTick(() => {
-      this.initChart()
-    })
+  async mounted() {
+    await this.loadData();
   },
   methods: {
-    initChart() {
-      if (!this.data || this.data.length === 0) {
-        console.warn('没有数据，无法绘制图表')
-        return
+    async loadData() {
+      this.loading = true;
+      try {
+        this.techData = await getTechHeat();
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      } finally {
+        this.loading = false;
       }
-      
-      // 为了更好的视觉效果，可以放大heat值
-      const maxHeat = Math.max(...this.data.map(item => item.heat))
-      const scaleFactor = maxHeat <= 2 ? 10 : 1  // 如果heat值小，放大10倍
-      
-      const wordData = this.data.map(item => ({
-        name: item.skill.split('/').pop(),  // 只显示项目名，不显示组织名
-        value: item.heat * scaleFactor,
-        originalHeat: item.heat,
-        fullName: item.skill,
-        updated_at: item.updated_at
-      }))
-      
-      const chart = echarts.init(this.$refs.chartRef)
-      
-      const option = {
-        title: {
-          text: '技术栈热度词云',
-          left: 'center',
-          textStyle: {
-            fontSize: 18,
-            fontWeight: 'bold'
-          }
-        },
-        tooltip: {
-          formatter: function(params) {
-            return `
-              <div style="padding: 5px;">
-                <strong>${params.data.fullName}</strong><br/>
-                热度: ${params.data.originalHeat}<br/>
-                更新时间: ${params.data.updated_at}
-              </div>
-            `
-          }
-        },
-        series: [{
-          type: 'wordCloud',
-          shape: 'circle',
-          left: 'center',
-          top: 'center',
-          width: '95%',
-          height: '90%',
-          sizeRange: [20, 80],  // 文字大小范围
-          rotationRange: [-45, 45],  // 旋转角度范围
-          rotationStep: 45,
-          gridSize: 15,
-          drawOutOfBound: false,
-          textStyle: {
-            fontWeight: 'bold',
-            color: function () {
-              // 更丰富的颜色方案
-              const colors = [
-                '#5470c6', '#91cc75', '#fac858', '#ee6666',
-                '#73c0de', '#3ba272', '#fc8452', '#9a60b4',
-                '#ea7ccc', '#60acfc'
-              ]
-              return colors[Math.floor(Math.random() * colors.length)]
-            }
-          },
-          emphasis: {
-            textStyle: {
-              shadowBlur: 15,
-              shadowColor: '#333'
-            }
-          },
-          data: wordData
-        }]
+    },
+    formatDate(date) {
+      if (!date) return '未知';
+      try {
+        return new Date(date).toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch {
+        return date;
       }
-      
-      chart.setOption(option)
-      
-      // 响应窗口大小变化
-      window.addEventListener('resize', () => {
-        chart.resize()
-      })
-    }
-  },
-  watch: {
-    data: {
-      handler() {
-        this.initChart()
-      },
-      deep: true
     }
   }
-}
+};
 </script>

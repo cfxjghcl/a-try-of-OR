@@ -40,7 +40,7 @@ def get_tech_heat():
         )
         
         with connection.cursor() as cursor:
-            sql = "SELECT skill, heat FROM tech_heat ORDER BY heat DESC"
+            sql = "SELECT skill, heat, updated_at FROM tech_heat ORDER BY heat DESC"
             cursor.execute(sql)
             rows = cursor.fetchall()
         

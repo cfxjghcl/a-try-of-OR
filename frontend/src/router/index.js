@@ -1,26 +1,12 @@
-﻿import { createRouter, createWebHistory } from "vue-router";
-
-const routes = [
-  {
-    path: "/",
-    name: "Home",
-    redirect: "/tech",
-  },
-  {
-    path: "/tech",
-    name: "Tech",
-    component: () => import("@/views/TechView.vue"),
-  },
-  {
-    path: "/health",
-    name: "Health",
-    component: () => import("@/views/HealthView.vue"),
-  },
-];
+﻿import { createRouter, createWebHistory } from 'vue-router'
+import TechView from '../views/TechView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
-});
+  routes: [
+    { path: '/', component: TechView },
+    { path: '/tech', redirect: '/' }
+  ]
+})
 
-export default router;
+export default router
