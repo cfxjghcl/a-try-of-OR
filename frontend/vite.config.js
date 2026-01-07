@@ -1,15 +1,9 @@
 import { fileURLToPath, URL } from 'node:url'
-
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -19,12 +13,11 @@ export default defineConfig({
     // 代理配置，解决CORS问题
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5000', // 后端服务器地址
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '')
       }
     },
-    // 只监听localhost，避免防火墙警告（校园网更安全）
+    // 只监听localhost，避免防火墙警告
     host: 'localhost',
     port: 5173,
     open: false
