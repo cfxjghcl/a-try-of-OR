@@ -1,36 +1,33 @@
 export const getTechHeat = async () => {
+  console.log('🚀 尝试从后端获取数据...');
+  
   try {
-    const response = await fetch('/api/tech_heat');
-    const result = await response.json();
+    // 先尝试直接调用后端
+    const response = await fetch('http://localhost:5000/api/tech_heat');
     
-    // 根据你的后端API格式调整
-    // 如果返回的是 { data: [...], ... } 格式
-    if (result.data && Array.isArray(result.data)) {
-      return result.data;
-    } 
-    // 如果直接返回数组
-    else if (Array.isArray(result)) {
-      return result;
-    } 
-    // 其他格式
-    else {
-      console.error('未知的数据格式:', result);
-      return [];
+    if (!response.ok) {
+      throw new Error(`HTTP错误: ${response.status}`);
     }
+    
+    const data = await response.json();
+    console.log('✅ 成功获取后端数据:', data);
+    return data;
+    
   } catch (error) {
-    console.error('获取技术热度失败:', error);
-    // 返回模拟数据用于测试
+    console.warn('⚠️ 后端请求失败，使用模拟数据:', error);
+    
+    // 返回中文格式的模拟数据
     return [
-      { skill: 'facebook/react', heat: 2, updated_at: new Date().toISOString() },
-      { skill: 'vercel/next.js', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'microsoft/vscode', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'pmndrs/zustand', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'tailwindlabs/tailwindcss', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'vitejs/vite', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'nodejs/node', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'mrdoob/three.js', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'nestjs/nest', heat: 1, updated_at: new Date().toISOString() },
-      { skill: 'vuejs/vue', heat: 1, updated_at: new Date().toISOString() }
+      {"技术栈": "Python", "热度值": 95, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "JavaScript", "热度值": 88, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "Java", "热度值": 76, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "C++", "热度值": 65, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "Go", "热度值": 50, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "TypeScript", "热度值": 85, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "Vue.js", "热度值": 82, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "React", "热度值": 80, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "Spring Boot", "热度值": 75, "更新时间": new Date().toLocaleString()},
+      {"技术栈": "Docker", "热度值": 70, "更新时间": new Date().toLocaleString()}
     ];
   }
 };
