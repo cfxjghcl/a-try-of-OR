@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+requests  # 仅用requests请求CDN数据
+apscheduler
+python-dotenv
+pandas
