@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, jsonify, send_from_directory, request
+from flask import Blueprint, render_template, jsonify, send_from_directory, request,g
 from datetime import datetime
 import json
-from flask import send_from_directory
+from app import db
+from .auth import token_required, get_current_user
+from .models import User, Career,UserFavorite
 
 # 创建两个蓝图：一个用于主页面，一个用于API
 main_bp = Blueprint('main', __name__)
@@ -368,3 +370,279 @@ def update_wordcloud():
             'error': str(e),
             'message': '词云更新失败，请检查tasks模块'
         }), 500
+
+#===== 用户相关API =====
+@api_bp.route('/auth/register', methods=['POST'])
+def register():
+    """用户注册"""
+    data = request.get_json(silent=True)or{}
+    # 验证
+    required_fields = ['username', 'email', 'password']
+    for field in required_fields:
+        if field not in data or not data[field]:
+            return jsonify({'error': f'Missing required field: {field}'}), 400
+    
+    if User.query.filter_by(username=data['username']).first():
+        return jsonify({'error': 'Username already exists'}), 400
+    
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({'error': 'Email already exists'}), 400
+    
+    # 创建新用户
+    user = User(
+        username=data['username'],
+        email=data['email'],
+        major=data.get('major', ''), 
+        target_career=data.get('target_career', '')  
+    )
+    user.set_password(data['password'])
+    
+    try:
+        db.session.add(user)
+        db.session.commit()
+        
+        token = user.generate_token()
+        
+        return jsonify({
+            'message': '用户注册成功',
+            'user': user.to_dict(),
+            'token': token,
+            'expires_in': 86400  # 24小时
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/auth/login', methods=['POST'])
+def login():
+    """用户登录"""
+    data = request.get_json(silent=True)or{}
+    
+    # 验证
+    if 'username' not in data or 'password' not in data:
+        return jsonify({'error': '用户名或密码不能为空'}), 400
+    user = User.query.filter(
+        (User.username == data['username']) | (User.email == data['username'])
+    ).first()
+    
+    if not user:
+        return jsonify({'error': '该用户不存在'}), 404
+    
+    if not user.check_password(data['password']):
+        return jsonify({'error': '密码或用户名错误'}), 401
+    
+    token = user.generate_token()
+
+    return jsonify({
+        'message': '登录成功',
+        'user': user.to_dict(),
+        'token': token,
+        'expires_in': 86400
+    }), 200
+
+@api_bp.route('/auth/profile', methods=['GET'])
+@token_required
+def get_profile():
+    """获取"""
+    user = get_current_user()
+    return jsonify({'user': user.to_dict()}), 200
+
+@api_bp.route('/auth/profile', methods=['PUT'])
+@token_required
+def update_profile():
+    """更新"""
+    user = get_current_user()
+    data = request.json
+    
+    allowed_fields = ['email', 'major', 'target_career']
+    
+    for field in allowed_fields:
+        if field in data:
+            setattr(user, field, data[field])
+    
+    # 如果请求中包含密码，更新密码
+    if 'password' in data and data['password']:
+        user.set_password(data['password'])
+    
+    user.updated_at = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'Profile updated successfully',
+            'user': user.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/auth/validate', methods=['GET'])
+@token_required
+def validate_token():
+    """验证token是否有效"""
+    user = get_current_user()
+    return jsonify({
+        'valid': True,
+        'user': user.to_dict()
+    }), 200
+
+# ==== 个性化推荐API ====
+@api_bp.route('/recommend/careers', methods=['GET'])
+@token_required
+def recommend_careers():
+    """基于用户专业和目标职业推荐职业"""
+    user = get_current_user()
+    careers = []
+    if not user.major and not user.target_career:
+        careers = Career.query.order_by(Career.avg_entry_salary.desc()).limit(5).all()
+    else:
+        if user.target_career:
+            target_career = Career.query.filter(
+                Career.name.ilike(f"%{user.target_career}%")
+            ).first()
+            
+            if target_career:
+                # 找同类别或相似薪资的职业
+                careers = Career.query.filter(
+                    (Career.category == target_career.category) |
+                    (Career.avg_entry_salary.between(
+                        target_career.avg_entry_salary * 0.8,
+                        target_career.avg_entry_salary * 1.2
+                    ))
+                ).limit(5).all()
+            else:
+                # 默认返回
+                careers = Career.query.order_by(Career.avg_entry_salary.desc()).limit(5).all()
+        else:
+            # 根据专业推荐（可扩展）
+            careers = Career.query.order_by(Career.avg_entry_salary.desc()).limit(5).all()
+    
+    return jsonify({
+        'recommendations': [
+            {
+                'id': career.id,
+                'name': career.name,
+                'category': career.category,
+                'description': career.description,
+                'avg_entry_salary': career.avg_entry_salary,
+                'demand_level': career.demand_level,
+                'match_reason': '根据您的专业和目标职业推荐'  
+            }
+            for career in careers
+        ]
+    }), 200
+
+@api_bp.route('/recommend/learning-path', methods=['GET'])
+@token_required
+def learning_path_recommendation():
+    """推荐学习路径"""
+    user = get_current_user()
+    
+    # 这里可以根据目标职业返回学习路径
+    learning_paths = {
+        '后端开发': {
+            'title': '后端开发工程师学习路径',
+            'steps': [
+                '1. 学习Python/Java基础语法',
+                '2. 掌握数据库设计（MySQL, Redis）',
+                '3. 学习Web框架（Django/Spring Boot）',
+                '4. 掌握Linux和服务器部署',
+                '5. 学习微服务和分布式系统',
+                '6. 项目实战：电商系统/社交平台'
+            ],
+            'duration': '6-12个月',
+            'resources': ['慕课网', '极客时间', '官方文档']
+        },
+        '前端开发': {
+            'title': '前端开发工程师学习路径',
+            'steps': [
+                '1. 学习HTML/CSS/JavaScript基础',
+                '2. 掌握Vue.js或React框架',
+                '3. 学习TypeScript和ES6+',
+                '4. 掌握Webpack/Vite等构建工具',
+                '5. 学习移动端开发和响应式设计',
+                '6. 项目实战：管理系统/移动应用'
+            ],
+            'duration': '4-8个月',
+            'resources': ['MDN文档', 'Vue官方文档', 'React官方文档']
+        }
+    }
+    
+    target = user.target_career or '后端开发'
+    path = learning_paths.get(target, learning_paths['后端开发'])
+    
+    return jsonify({
+        'target_career': target,
+        'learning_path': path
+    }), 200
+
+# ==== 收藏功能API ====
+
+@api_bp.route('/favorites/careers', methods=['GET'])
+@token_required
+def get_favorite_careers():
+    """获取用户收藏的职业"""
+    user = get_current_user()    
+    favorites = user.favorites  # 通过关系获取
+    
+    return jsonify({
+        'favorites': [
+            {
+                'id': career.id,
+                'name': career.name,
+                'category': career.category,
+                'avg_entry_salary': career.avg_entry_salary
+            }
+            for career in favorites
+        ],
+        'count': len(favorites)
+    }), 200
+
+@api_bp.route('/favorites/careers/<int:career_id>', methods=['POST'])
+@token_required
+def add_favorite_career(career_id):
+    """添加职业到收藏"""
+    user = get_current_user()
+    
+    career = Career.query.get(career_id)
+    if not career:
+        return jsonify({'error': 'Career not found'}), 404
+
+    existing = UserFavorite.query.filter_by(
+        user_id=user.id, 
+        career_id=career_id
+    ).first()
+    
+    if existing:
+        return jsonify({'error': 'Already in favorites'}), 400
+    favorite = UserFavorite(user_id=user.id, career_id=career_id)
+    
+    try:
+        db.session.add(favorite)
+        db.session.commit()
+        return jsonify({'message': 'Added to favorites'}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/favorites/careers/<int:career_id>', methods=['DELETE'])
+@token_required
+def remove_favorite_career(career_id):
+    """从收藏中移除职业"""
+    user = get_current_user()
+    
+    favorite = UserFavorite.query.filter_by(
+        user_id=user.id, 
+        career_id=career_id
+    ).first()
+    
+    if not favorite:
+        return jsonify({'error': 'Not in favorites'}), 404
+    
+    try:
+        db.session.delete(favorite)
+        db.session.commit()
+        return jsonify({'message': 'Removed from favorites'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
