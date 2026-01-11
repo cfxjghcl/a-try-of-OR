@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, jsonify, send_from_directory, request
 from datetime import datetime
 import json
+from flask import send_from_directory
 
 # 创建两个蓝图：一个用于主页面，一个用于API
 main_bp = Blueprint('main', __name__)
@@ -9,6 +10,50 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 # ========== 主页面路由（main_bp）===========
 
 @main_bp.route('/')
+def index():
+    """后端首页 - 重定向到前端页面"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>就业可视化平台 - 后端API</title>
+        <style>
+            body { font-family: Arial; padding: 40px; text-align: center; }
+            .box { max-width: 800px; margin: 0 auto; padding: 30px; background: #f5f7fa; border-radius: 10px; }
+            a { color: #3498db; text-decoration: none; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <div class="box">
+            <h1>📊 计算机科学与技术就业可视化平台</h1>
+            <p>后端API服务运行正常！</p >
+            <p>请访问前端页面查看可视化图表：</p >
+            <p><a href="/view" target="_blank">👉 点击这里打开前端页面</a ></p >
+            <hr>
+            <h3>API接口列表：</h3>
+            <ul style="text-align: left; display: inline-block;">
+                <li><a href="/api/employment-trend" target="_blank">/api/employment-trend</a > - 就业趋势</li>
+                <li><a href="/api/salary-trend" target="_blank">/api/salary-trend</a > - 薪资趋势</li>
+                <li><a href="/api/wordcloud" target="_blank">/api/wordcloud</a > - 技术词云</li>
+                <li><a href="/api/tech_heat" target="_blank">/api/tech_heat</a > - GitHub技术热度</li>
+                <li><a href="/api/careers" target="_blank">/api/careers</a > - 职业列表</li>
+                <li><a href="/api/health" target="_blank">/api/health</a > - 健康检查</li>
+            </ul>
+        </div>
+    </body>
+    </html>
+    '''
+
+# =========直接访问前端页面==========
+@main_bp.route('/view')
+def view_frontend():
+    """直接访问前端页面"""
+    import os
+    frontend_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '..','frontend', 'index.html')
+    if os.path.exists(frontend_path):
+        return send_from_directory(os.path.dirname(frontend_path), 'index.html')
+    return "前端页面未找到，请确保frontend目录存在。", 404
+
 
 # ========== 处理旧的API请求（避免404错误）===========
 @main_bp.route('/hybridaction/zybTrackerStatisticsAction')
