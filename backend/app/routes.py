@@ -29,7 +29,48 @@ def index():
         .nav { text-align: center; margin: 20px 0; }
         .nav a { margin: 0 10px; color: #3498db; text-decoration: none; }
         .nav a:hover { text-decoration: underline; }
-    </style>
+        .filter-box { background: white; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .filters { display: flex; flex-wrap: wrap; gap: 15px; }
+        .filter-group { margin-bottom: 10px; }
+        .filter-grouplabel { margin-right: 10px; font-weight: bold; }
+        .filter-select, .filter-checkbox { margin-right: 15px; }
+        .filter-btn { padding: 8px 15px; margin-right: 10px; border: none; border-radius: 5px; cursor: pointer; }
+        .filter-btn:hover { opacity: 0.9; }
+        .filter-btn.success { background-color: #4CAF50; color: white; }
+        .filter-btn.secondary { background-color: #f0f0f0; color: #333; }
+        .filter-btn.secondary:hover { opacity: 0.9; }
+        .career-checkboxes label { display:flex; align-items:center; }
+        .career-checkboxes { display: flex; flex-wrap: wrap; gap:10px; }
+        
+        funtion applyFilters() {
+         const yearRange = document.getElementById('yearRange').value;
+         const chartType = document.getElementById('chartType').value;
+         const careerCheckboxes = document.querySelectorAll('input[name="career"]:checked');
+         const selectedCareers = Array.from(document.querySelectorAll('input[name="career"]:checked')).map(cb => cb.value);
+         console.log('应用筛选:', { yearRange, chartType, selectedCareers });
+
+         updateChartsWithFilters(selectedCareers,yearRange,chartType);
+         document.getElementById('status').innerHTML = '✅ 筛选已应用';
+        }
+          
+        function resetFilters() {
+            document.getElementById('yearRange').value = '2020-2025';
+            document.getElementById('chartType').value = 'line';
+            document.querySelectorAll('input[name="career"]').forEach(cb => cb.checked = true);
+            renderAllCharts();
+            document.getElementById('status').innerHTML = '✅ 筛选已重置';
+        }
+        
+        function refreshData() {
+            document.getElementById('status').innerHTML = '🔄 正在刷新数据...';
+
+            fetchAllData().then(() => {document.getElementById('status').innerHTML = '✅ 数据已刷新';});
+        }
+
+        function updateChartsWithFilters(careers, yearRange, chartType) {alert('此功能正在开发中...\n选中的职业：${careers.join(', ')\n年份:$yearRange\n}');
+        //TODO: 根据筛选条件更新图表数据
+        }     
+        </style>
 </head>
 <body>
     <h1>计算机科学与技术专业就业可视化平台</h1>
@@ -55,13 +96,53 @@ def index():
         </ul>
     </div>
     
+    <div class="filter-box">
+     <h3>📊 数据筛选与交互</h3>
+     <div class="filters">
+         <div class="filter-group">
+             <label for="yearRange">📅 年份范围：</label>
+             <select id="yearRange" class="filter-select">
+                 <option value="2020-2024">2020-2025(全部)</option>
+                 <option value="2020-2022">2020-2022</option>
+                 <option value="2023-2024">2023-2024</option>
+                 <option value="2024-2025">2024-2025</option>
+                 <option value="2025-2026">2025-2026</option>
+             </select>
+         </div>
+        
+         <div class="filter-group">
+             <label>👨‍💻 显示职业：</label>
+             <div class="career-checkboxes">
+                 <label><input type="checkbox" name="career" value="backend" checked> 后端开发</label>
+                 <label><input type="checkbox" name="career" value="frontend" checked> 前端开发</label>
+                 <label><input type="checkbox" name="career" value="fullstack" checked> 全栈开发</label>
+                 <label><input type="checkbox" name="career" value="data_science" checked> 数据科学</label>
+                 <label><input type="checkbox" name="career" value="ai_engineer" checked> AI工程师</label>
+                 </div>
+             </div>
+        
+             <div class="filter-group">
+                 <label>📈 图表类型：</label>
+                 <select id="chartType" class="filter-select">
+                     <option value="line">折线图</option>
+                     <option value="bar">柱状图</option>
+                     <option value="both">折线+柱状</option>
+                 </select>
+            </div>
+        
+             <button onclick="applyFilters()" class="filter-btn">应用筛选</button>
+             <button onclick="resetFilters()" class="filter-btn secondary">重置</button>
+             <button onclick="refreshData()" class="filter-btn success">🔄 刷新数据</button>
+         </div>
+    </div>
+
     <div class="chart-box">
-        <h3>就业率趋势 (2020-2024)</h3>
+        <h3>就业率趋势 (2020-2025)</h3>
         <div id="employmentChart" class="chart"></div>
     </div>
     
     <div class="chart-box">
-        <h3>平均薪资趋势 (2020-2024)</h3>
+        <h3>平均薪资趋势 (2020-2025)</h3>
         <div id="salaryChart" class="chart"></div>
     </div>
     
@@ -444,3 +525,120 @@ def tech_heat():
             'timestamp': datetime.now().isoformat(),
             'note': '使用模拟数据'
         })
+#========= 职业相关API==========
+@api_bp.route('/careers')
+def get_careers():
+    """获取所有职业信息"""
+    try:
+        import pymysql
+        
+        connection = pymysql.connect(
+            host='127.0.0.1',
+            port=3306,
+            user='root',
+            password='123456',
+            database='jobviz',
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        
+        with connection.cursor() as cursor:
+            sql = "SELECT * FROM careers ORDER BY avg_entry_salary DESC"
+            cursor.execute(sql)
+            careers = cursor.fetchall()
+        
+        connection.close()
+        
+        return jsonify({
+            'count': len(careers),
+            'careers': careers,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"获取职业数据失败: {e}")
+        # 返回模拟数据
+        mock_careers = [
+            {"id": 1, "name": "后端开发", "category": "开发", "avg_entry_salary": 15000},
+            {"id": 2, "name": "前端开发", "category": "开发", "avg_entry_salary": 14000},
+            {"id": 3, "name": "全栈开发", "category": "开发", "avg_entry_salary": 18000},
+            {"id": 4, "name": "数据科学", "category": "数据", "avg_entry_salary": 20000},
+            {"id": 5, "name": "AI工程师", "category": "人工智能", "avg_entry_salary": 25000},
+            {"id": 6, "name": "运维工程师", "category": "运维", "avg_entry_salary": 16000},
+            {"id": 7, "name": "测试开发", "category": "测试", "avg_entry_salary": 13000}
+        ]
+        return jsonify({
+            'count': len(mock_careers),
+            'careers': mock_careers,
+            'note': '使用模拟数据'
+        })
+
+@api_bp.route('/career/<int:career_id>')
+def get_career_detail(career_id):
+    """获取特定职业详情"""
+    try:
+        import pymysql
+        
+        connection = pymysql.connect(
+            host='127.0.0.1',
+            port=3306,
+            user='root',
+            password='123456',
+            database='jobviz',
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        
+        with connection.cursor() as cursor:
+            # 获取职业基本信息
+            sql = "SELECT * FROM careers WHERE id = %s"
+            cursor.execute(sql, (career_id,))
+            career = cursor.fetchone()
+            
+            if not career:
+                return jsonify({'error': '职业不存在'}), 404
+            
+            # 这里可以添加获取该职业的趋势数据等
+            
+        connection.close()
+        
+        return jsonify({
+            'career': career,
+            'trend_data': {
+                'years': [2020, 2021, 2022, 2023, 2024],
+                'employment_rate': [85, 87, 89, 88, 90],
+                'salary': [15000, 16500, 18500, 19500, 21000]
+            }
+        })
+        
+    except Exception as e:
+        print(f"获取职业详情失败: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@api_bp.route('/update-wordcloud', methods=['POST', 'GET'])
+def update_wordcloud():
+    """手动更新词云数据"""
+    try:
+        # 导入词云生成函数
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        
+        from tasks.wordcloud_task import generate_wordcloud_data
+        
+        result = generate_wordcloud_data()
+        
+        return jsonify({
+            'success': True,
+            'message': f'词云数据已更新，共 {len(result["data"])} 个词条',
+            'updated_at': result['updated_at'],
+            'sample_data': result['data'][:5]  # 显示前5个词条作为示例
+        })
+        
+    except Exception as e:
+        print(f"更新词云失败: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': '词云更新失败，请检查tasks模块'
+        }), 500
