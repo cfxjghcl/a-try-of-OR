@@ -16,6 +16,8 @@ def create_app():
     # 数据库配置
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:123456@127.0.0.1:3306/jobviz?charset=utf8mb4'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SQLALCHEMY_POOL_SIZE'] = 20
+    app.config['SQLALCHEMY_POOL_RECYCLE'] = 280
     
     CORS(app, resources={r"/*": {"origins": "*"}})
     
