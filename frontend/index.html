@@ -1,13 +1,305 @@
 <!DOCTYPE html>
-<html lang="">
-  <head>
+<head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-  </body>
+    <title>计算机科学与技术就业可视化平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body { font-family: 'Arial', sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f7fa; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .chart-box { background: white; border-radius: 10px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .chart { width: 100%; height: 400px; }
+        .status { background: #e3f2fd; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .api-list { background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .api-list code { background: #eee; padding: 2px 5px; border-radius: 3px; }
+        .nav { text-align: center; margin: 20px 0; }
+        .nav a { margin: 0 10px; color: #3498db; text-decoration: none; }
+        .nav a:hover { text-decoration: underline; }
+        .filter-box { background: white; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .filters { display: flex; flex-wrap: wrap; gap: 15px; }
+        .filter-group { margin-bottom: 10px; }
+        .filter-grouplabel { margin-right: 10px; font-weight: bold; }
+        .filter-select, .filter-checkbox { margin-right: 15px; }
+        .filter-btn { padding: 8px 15px; margin-right: 10px; border: none; border-radius: 5px; cursor: pointer; }
+        .filter-btn:hover { opacity: 0.9; }
+        .filter-btn.success { background-color: #4CAF50; color: white; }
+        .filter-btn.secondary { background-color: #f0f0f0; color: #333; }
+        .filter-btn.secondary:hover { opacity: 0.9; }
+        .career-checkboxes label { display:flex; align-items:center; }
+        .career-checkboxes { display: flex; flex-wrap: wrap; gap:10px; }
+             
+        </style>
+</head>
+<body>
+    <h1>计算机科学与技术专业就业可视化平台</h1>
+    
+    <div class="nav">
+        <a href=" ">首页</a > | 
+        <a href="/api/test-connection">测试连接</a > | 
+        <a href="/api/health">健康检查</a > | 
+        <a href="/api/tech_heat">技术热度</a >
+    </div>
+    
+    <div class="status">📊 正在加载数据...</div>
+    
+    <div class="api-list">
+        <h3>可用API接口：</h3>
+        <ul>
+            <li><code>GET /api/employment-trend</code> - 就业趋势数据</li> 
+            <li><code>GET /api/salary-trend</code> - 薪资趋势数据</li>
+            <li><code>GET /api/wordcloud</code> - 技术栈词云数据</li>      
+            <li><code>GET /api/tech_heat</code> - GitHub技术热度</li>
+            <li><code>GET /api/test-connection</code> - 测试连接</li>
+            <li><code>GET /api/health</code> - 健康检查</li>
+        </ul>
+    </div>
+    
+    <div class="filter-box">
+     <h3>📊 数据筛选与交互</h3>
+     <div class="filters">
+         <div class="filter-group">
+             <label for="yearRange">📅 年份范围：</label>
+             <select id="yearRange" class="filter-select">
+                 <option value="2020-2024">2020-2025(全部)</option>
+                 <option value="2020-2022">2020-2022</option>
+                 <option value="2023-2024">2023-2024</option>
+                 <option value="2024-2025">2024-2025</option>
+                 <option value="2025-2026">2025-2026</option>
+             </select>
+         </div>
+        
+         <div class="filter-group">
+             <label>👨‍💻 显示职业：</label>
+             <div class="career-checkboxes">
+                 <label><input type="checkbox" name="career" value="backend" checked> 后端开发</label>
+                 <label><input type="checkbox" name="career" value="frontend" checked> 前端开发</label>
+                 <label><input type="checkbox" name="career" value="fullstack" checked> 全栈开发</label>
+                 <label><input type="checkbox" name="career" value="data_science" checked> 数据科学</label>
+                 <label><input type="checkbox" name="career" value="ai_engineer" checked> AI工程师</label>
+                 </div>
+             </div>
+        
+             <div class="filter-group">
+                 <label>📈 图表类型：</label>
+                 <select id="chartType" class="filter-select">
+                     <option value="line">折线图</option>
+                     <option value="bar">柱状图</option>
+                     <option value="both">折线+柱状</option>
+                 </select>
+            </div>
+        
+             <button onclick="applyFilters()" class="filter-btn">应用筛选</button>
+             <button onclick="resetFilters()" class="filter-btn secondary">重置</button>
+             <button onclick="refreshData()" class="filter-btn success">🔄 刷新数据</button>
+         </div>
+    </div>
+
+    <div class="chart-box">
+        <h3>就业率趋势 (2020-2025)</h3>
+        <div id="employmentChart" class="chart"></div>
+    </div>
+    
+    <div class="chart-box">
+        <h3>平均薪资趋势 (2020-2025)</h3>
+        <div id="salaryChart" class="chart"></div>
+    </div>
+    
+    <div class="chart-box">
+        <h3>热门技术栈词云</h3>
+        <div id="wordcloudChart" class="chart"></div>
+    </div>
+    
+    <div class="chart-box">
+        <h3>GitHub技术热度排行</h3>
+        <div id="techHeatChart" class="chart"></div>
+    </div>
+    
+    <script>
+        const API_BASE = window.location.origin;
+        
+        console.log('当前API地址:', API_BASE);
+        
+        // 1. 获取就业数据 
+        fetch(API_BASE + '/api/employment-trend')
+            .then(res => {
+                console.log('就业API状态码:', res.status);
+                if (!res.ok) {
+                    throw new Error('就业API请求失败: ' + res.status);
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('就业数据:', data);
+                const chart = echarts.init(document.getElementById('employmentChart'));
+                chart.setOption({
+                    title: { text: '就业率趋势 (%)' },
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: data.years },
+                    yAxis: { type: 'value', min: 80, max: 100, name: '就业率(%)' },
+                    legend: { data: ['后端开发', '前端开发', '全栈开发', '数据科学', 'AI工程师'] },
+                    series: [
+                        { name: '后端开发', type: 'line', data: data.backend },
+                        { name: '前端开发', type: 'line', data: data.frontend },
+                        { name: '全栈开发', type: 'line', data: data.fullstack },
+                        { name: '数据科学', type: 'line', data: data.data_science },
+                        { name: 'AI工程师', type: 'line', data: data.ai_engineer }
+                    ]
+                });
+                document.querySelector('.status').innerHTML = '✅ 就业数据加载完成';
+            })
+            .catch(error => {
+                console.error('获取就业数据失败:', error);
+                document.querySelector('.status').innerHTML = '❌ 就业数据加载失败: ' + error.message;
+            });
+        
+        // 2. 获取薪资数据
+        fetch(API_BASE + '/api/salary-trend')
+            .then(res => {
+                console.log('薪资API状态码:', res.status);
+                if (!res.ok) {
+                    throw new Error('薪资API请求失败: ' + res.status);
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('薪资数据:', data);
+                const chart = echarts.init(document.getElementById('salaryChart'));
+                chart.setOption({
+                    title: { text: '平均月薪 (元)' },
+                    tooltip: { trigger: 'axis' },
+                    xAxis: { type: 'category', data: data.years },
+                    yAxis: { type: 'value', name: '月薪(元)' },
+                    legend: { data: ['后端开发', '前端开发', '全栈开发', '数据科学', 'AI工程师'] },
+                    series: [
+                        { name: '后端开发', type: 'bar', data: data.backend },
+                        { name: '前端开发', type: 'bar', data: data.frontend },
+                        { name: '全栈开发', type: 'bar', data: data.fullstack },
+                        { name: '数据科学', type: 'bar', data: data.data_science },
+                        { name: 'AI工程师', type: 'bar', data: data.ai_engineer }
+                    ]
+                });
+                document.querySelector('.status').innerHTML += '<br>✅ 薪资数据加载完成';
+            })
+            .catch(error => {
+                console.error('获取薪资数据失败:', error);
+                document.querySelector('.status').innerHTML += '<br>❌ 薪资数据加载失败: ' + error.message;
+            });
+        
+        // 3. 获取词云数据 - 修正URL拼写
+        fetch(API_BASE + '/api/wordcloud')  // 原来是 /api/worldoud
+            .then(res => {
+                console.log('词云API状态码:', res.status);
+                if (!res.ok) {
+                    throw new Error('词云API请求失败: ' + res.status);
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('词云数据:', data);
+                const chart = echarts.init(document.getElementById('wordcloudChart'));
+                chart.setOption({
+                    title: { text: '热门技术栈词云', left: 'center' },
+                    tooltip: { show: true },
+                    series: [{
+                        type: 'wordCloud',
+                        shape: 'circle',
+                        sizeRange: [20, 80],
+                        rotationRange: [-45, 45],
+                        gridSize: 8,
+                        drawOutOfBound: false,
+                        textStyle: {
+                            fontFamily: 'sans-serif',
+                            fontWeight: 'bold',
+                            color: function () {
+                                return 'rgb(' + [
+                                    Math.round(Math.random() * 160 + 50),
+                                    Math.round(Math.random() * 160 + 50),
+                                    Math.round(Math.random() * 160 + 50)
+                                ].join(',') + ')';
+                            }
+                        },
+                        data: data.data
+                    }]
+                });
+                document.querySelector('.status').innerHTML += '<br>✅ 词云数据加载完成';
+            })
+            .catch(error => {
+                console.error('获取词云数据失败:', error);
+                document.querySelector('.status').innerHTML += '<br>❌ 词云数据加载失败: ' + error.message;
+            });
+        
+        // 4. 获取GitHub技术热度数据
+        fetch(API_BASE + '/api/tech_heat')
+            .then(res => {
+                console.log('技术热度API状态码:', res.status);
+                if (!res.ok) {
+                    throw new Error('技术热度API请求失败: ' + res.status);
+                }
+                return res.json();
+            })
+            .then(data => {
+                console.log('技术热度数据:', data);
+                const chart = echarts.init(document.getElementById('techHeatChart'));
+                
+                // 处理数据
+                const skills = data.data.map(item => item.skill);
+                const heats = data.data.map(item => item.heat);
+                
+                chart.setOption({
+                    title: { text: 'GitHub技术热度排行', left: 'center' },
+                    tooltip: {
+                        trigger: 'axis',
+                        axisPointer: { type: 'shadow' }
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: skills,
+                        axisLabel: {
+                            rotate: 45,
+                            interval: 0
+                        }
+                    },
+                    yAxis: {type: 'value',name: '热度'},
+                    series: [{name: '热度',type: 'bar',data: heats,
+                        itemStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: '#83bff6' },
+                                { offset: 0.5, color: '#188df0' },
+                                { offset: 1, color: '#188df0' }
+                            ])}}]});
+                document.querySelector('.status').innerHTML += '<br>✅ 技术热度数据加载完成';
+            })
+            .catch(error => {
+                console.error('获取技术热度数据失败:', error);
+                document.querySelector('.status').innerHTML += '<br>❌ 技术热度数据加载失败: ' + error.message;
+            });
+         function applyFilters() {
+         const yearRange = document.getElementById('yearRange').value;
+         const chartType = document.getElementById('chartType').value;
+         const careerCheckboxes = document.querySelectorAll('input[name="career"]:checked');
+         const selectedCareers = Array.from(document.querySelectorAll('input[name="career"]:checked')).map(cb => cb.value);
+         console.log('应用筛选:', { yearRange, chartType, selectedCareers });
+
+         updateChartsWithFilters(selectedCareers,yearRange,chartType);
+         document.getElementById('status').innerHTML = '✅ 筛选已应用';
+        }
+          
+        function resetFilters() {
+            document.getElementById('yearRange').value = '2020-2025';
+            document.getElementById('chartType').value = 'line';
+            document.querySelectorAll('input[name="career"]').forEach(cb => cb.checked = true);
+            renderAllCharts();
+            document.getElementById('status').innerHTML = '✅ 筛选已重置';
+        }
+        
+        function refreshData() {
+            document.getElementById('status').innerHTML = '🔄 正在刷新数据...';
+            fetchAllData().then(() => {document.getElementById('status').innerHTML = '✅ 数据已刷新';});
+        }
+
+        function updateChartsWithFilters(careers, yearRange, chartType) {alert('此功能正在开发中...\n选中的职业：${careers.join(', ')\n年份:$yearRange\n}');
+        //TODO: 根据筛选条件更新图表数据
+        }
+    </script>
+</body>
 </html>
+

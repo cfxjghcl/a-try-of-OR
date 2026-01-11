@@ -1,0 +1,102 @@
+{
+  "data": [
+    {
+      "name": "Redis",
+      "value": 100
+    },
+    {
+      "name": "AWS",
+      "value": 100
+    },
+    {
+      "name": "JavaScript",
+      "value": 99
+    },
+    {
+      "name": "Flask",
+      "value": 98
+    },
+    {
+      "name": "Vue",
+      "value": 95
+    },
+    {
+      "name": "Spring Boot",
+      "value": 94
+    },
+    {
+      "name": "TypeScript",
+      "value": 93
+    },
+    {
+      "name": "Docker",
+      "value": 92
+    },
+    {
+      "name": "React",
+      "value": 91
+    },
+    {
+      "name": "MySQL",
+      "value": 89
+    },
+    {
+      "name": "PostgreSQL",
+      "value": 87
+    },
+    {
+      "name": "微服务",
+      "value": 83
+    },
+    {
+      "name": "Java",
+      "value": 80
+    },
+    {
+      "name": "MongoDB",
+      "value": 80
+    },
+    {
+      "name": "FastAPI",
+      "value": 78
+    },
+    {
+      "name": "Linux",
+      "value": 70
+    },
+    {
+      "name": "Elasticsearch",
+      "value": 70
+    },
+    {
+      "name": "React Native",
+      "value": 70
+    },
+    {
+      "name": "Kubernetes",
+      "value": 64
+    },
+    {
+      "name": "Git",
+      "value": 63
+    },
+    {
+      "name": "Python",
+      "value": 62
+    },
+    {
+      "name": "Node.js",
+      "value": 61
+    },
+    {
+      "name": "Vue.js",
+      "value": 60
+    },
+    {
+      "name": "小程序",
+      "value": 56
+    }
+  ],
+  "updated_at": "2026-01-11T16:29:21.928885",
+  "count": 24
+}
