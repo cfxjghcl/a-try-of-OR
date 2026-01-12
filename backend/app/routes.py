@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, jsonify, send_from_directory, request,g,current_app
 from datetime import datetime
 import json
-from app import db,app,api_bp
+from app import db
 from .auth import token_required, get_current_user
 from .models import User, Career,UserFavorite,EmploymentRate,SalaryTrend,Skill
 
