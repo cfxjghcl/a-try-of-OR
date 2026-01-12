@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, jsonify, send_from_directory, request,g
+from flask import Blueprint, render_template, jsonify, send_from_directory, request,g,current_app
 from datetime import datetime
 import json
 from app import db
 from .auth import token_required, get_current_user
-from .models import User, Career,UserFavorite
+from .models import User, Career,UserFavorite,EmploymentRate,SalaryTrend,Skill
 
 # 创建两个蓝图：一个用于主页面，一个用于API
 main_bp = Blueprint('main', __name__)
@@ -649,9 +649,31 @@ def remove_favorite_career(career_id):
 
 # ======搜索功能API ======
 @api_bp.route('/search/careers', methods=['GET'])
+def get_employment_trend(career_id, year):
+    """获取职业就业率趋势"""
+    from app.models import EmploymentRate
+    trend = EmploymentRate.query.filter_by(
+        career_id=career_id,
+        year=year
+    ).first()
+    return trend.rate if trend else None
+
+def get_salary_trend(career_id, year):
+    """获取薪资趋势"""
+    from app.models import SalaryTrend
+    trend = SalaryTrend.query.filter_by(
+        career_id=career_id,
+        year=year
+    ).first()
+    return trend.avg_salary if trend else None
+
+def calculate_hot_index(career_id):
+    """计算职业热度指数"""
+    return 85  # 示例值
+
 def search_careers():
     """搜索职业"""
-    query = request.args.get('q', '').strip()
+    keyword = request.args.get('q', '').strip()
     page = int(request.args.get('page', 1))
     per_page = int(request.args.get('per_page', 10))
     sort_by = request.args.get('sort_by', 'salary') 
@@ -659,77 +681,112 @@ def search_careers():
     category = request.args.get('category', None)# 分类过滤
     min_salary = request.args.get('min_salary', None)
     max_salary = request.args.get('max_salary', None)# 薪资过滤
+    year = request.args.get('year', None)# 年份过滤
 
     if page < 1:
         page = 1
     if per_page < 1 or per_page > 100:
         per_page = 10
 
-    query = Career.query
-    #薪资筛选
-    if category:
-        query = query.filter(Career.category == category)
-    if min_salary:
-        query = query.filter(Career.avg_entry_salary >= int(min_salary))
-    if max_salary:
-        query = query.filter(Career.avg_entry_salary <= int(max_salary))
-    
-    # 排序
-    order_column = None
-    
-    if sort_by == 'name':
-        order_column = Career.name
-    else:
-        order_column = Career.avg_entry_salary  # 默认按薪资排序
-
-    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-    careers = pagination.items  #分页
-
-    if order_column is not None:
-        if order == 'asc':
-            query = query.order_by(order_column.asc())
-        else:
-            query = query.order_by(order_column.desc())
-    #返回
     try:
-        base_query = Career.query
-        if not query:
-            pagination = Career.query.paginate(page=page, per_page=per_page, error_out=False)
-            careers = pagination.items
-            message = '返回所有职业列表'
+        query = Career.query
+        #关键词搜索
+        if keyword:
+            query = query.filter(Career.name.ilike(f"%{keyword}%") | Career.description.ilike(f"%{keyword}%"))
+
+        #薪资筛选
+        if category:
+           query = query.filter(Career.category == category)
+        if min_salary:
+           query = query.filter(Career.avg_entry_salary >= int(min_salary))
+        if max_salary:
+           query = query.filter(Career.avg_entry_salary <= int(max_salary))
+        
+        #年份筛选
+        if year:
+            try:
+                from app.models import EmploymentRate #employmentRate就业表
+                subquery =db.session,query(EmploymentRate.career_id).filter(EmploymentRate.year == int(year)).subquery()
+                query =query.filter(Career.id.in_(subquery))
+            except Exception as e:
+                app.logger.warning(f"年份筛选异常")
+        
+        # 排序
+        order_column = None
+    
+        if sort_by == 'name':
+           order_column = Career.name
         else:
-          pagination = Career.query.filter(
-            Career.name.ilike(f"%{query}%") | 
-            Career.description.ilike(f"%{query}%")
-          ).paginate(page=page, per_page=per_page, error_out=False)
-          careers = pagination.items
-          message = f'搜索关键词：{query}'
-          return jsonify({
-            'message': message,
-            'results': [
-                {
-                    'id': career.id,
-                    'name': career.name,
-                    'category': career.category,
-                    'avg_entry_salary': career.avg_entry_salary
-                }
-                for career in careers
-            ],
-            'page': page,
-            'per_page': per_page,
-            'total': pagination.total
-        }), 200
+           order_column = Career.avg_entry_salary  # 默认按薪资排序
+
+        if order_column is not None:
+           if order == 'asc':
+              query = query.order_by(order_column.asc())
+           else:
+              query = query.order_by(order_column.desc())
+
+        #分页
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+        careers = pagination.items 
+   
+        # 构建响应
+        filter_applied = []
+        if keyword:
+            filter_applied.append(f"关键词：{keyword}")
+
+        #返回结果
+        return jsonify(
+            {
+                'sucess': True,
+                'message': message,
+                'data':{
+                    'result':[{
+                        'id': career.id,
+                        'name': career.name,
+                        'category': career.category,
+                        'avg_entry_salary': career.avg_entry_salary,
+                        'employment_trend':get_employment_trend(career.id,year)if year else None,
+                        'salary_trend':get_salary_trend(career.id,year)if year else None,
+                        'hot_index':calulate_hot_index(career.id),
+                        'skills_required': getattr(career, 'skills_required', ''),
+                        'in_demand': getattr(career, 'in_demand', False),
+                        'description': career.description[:100] + '...' if career.description and len(career.description) > 100 else career.description
+                    }
+                    for career in careers],
+                     'pagination': {
+                    'page': page,
+                    'per_page': per_page,
+                    'total': pagination.total,
+                    'total_pages': pagination.pages,
+                    'has_next': pagination.has_next,
+                    'has_prev': pagination.has_prev
+                },
+                'filters': {
+                    'keyword': keyword,
+                    'category': category,
+                    'min_salary': min_salary,
+                    'max_salary': max_salary,
+                    'year': year,
+                    'sort_by': sort_by,
+                    'order': order
+                }}}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        app.logger.error(f"搜索失败：{str(e)}")
+        return jsonify({
+            'success':False,
+            'error':"搜索失败",
+            'message':str(e)
+        }),500
+        
+        
 
 @api_bp.route('/search/careers/simple', methods=['GET'])
 def simple_search_careers():
     
     query = request.args.get('q', '').strip()
-    careers = Career.query.filter(
-        Career.name.ilike(f"%{query}%") | 
-        Career.description.ilike(f"%{query}%")
-    ).all()
+    limit = int(request.args.get('limit',10))
+
+    careers = Career.query.filter(Career.name.ilike(f"%{query}%") ).limit(limit).all()
     
     return jsonify({
         'results': [

@@ -97,3 +97,45 @@ class Career(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     favorite_by = db.relationship('User', secondary='user_favorites', backref='favorite_careers')
+
+#就业趋势表
+class EmploymentRate(db.Model):
+    __tablename__ = 'employment_rates'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    career_id = db.Column(db.Integer, db.ForeignKey('careers.id'), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    quarter = db.Column(db.Integer)
+    employment_rate = db.Column(db.Float)  # 百分比值
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    career = db.relationship('Career', backref=db.backref('employment_trends', lazy=True))
+
+#薪资趋势表
+class SalaryTrend(db.Model):
+    __tablename__ = 'salary_trends'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    career_id = db.Column(db.Integer, db.ForeignKey('careers.id'), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    avg_salary = db.Column(db.Float)
+    min_salary = db.Column(db.Float)
+    max_salary = db.Column(db.Float)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    career = db.relationship('Career', backref=db.backref('salary_trends', lazy=True))
+
+#技能要求表
+class Skill(db.Model):
+    __tablename__ = 'skills'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    career_id = db.Column(db.Integer, db.ForeignKey('careers.id'), nullable=False)
+    skill_name = db.Column(db.String(100), nullable=False)
+    importance_level = db.Column(db.Integer, default=3)  
+    is_required = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    career = db.relationship('Career', backref=db.backref('skills', lazy=True))
