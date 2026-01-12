@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, jsonify, send_from_directory, request,g,current_app
 from datetime import datetime
 import json
-from app import db
+from app import db,app,api_bp
 from .auth import token_required, get_current_user
 from .models import User, Career,UserFavorite,EmploymentRate,SalaryTrend,Skill
 
@@ -648,29 +648,54 @@ def remove_favorite_career(career_id):
         return jsonify({'error': str(e)}), 500
 
 # ======搜索功能API ======
-@api_bp.route('/search/careers', methods=['GET'])
+
 def get_employment_trend(career_id, year):
     """获取职业就业率趋势"""
-    from app.models import EmploymentRate
-    trend = EmploymentRate.query.filter_by(
-        career_id=career_id,
-        year=year
-    ).first()
-    return trend.rate if trend else None
+    try:
+        trend = EmploymentRate.query.filter_by(career_id=career_id,year=int(year)).first()
+        return trend.employment_rate if trend else None
+    except Exception as e:
+        app.logger.error(f"获取就业趋势失败：{e}")
+        return None
 
 def get_salary_trend(career_id, year):
     """获取薪资趋势"""
-    from app.models import SalaryTrend
-    trend = SalaryTrend.query.filter_by(
-        career_id=career_id,
-        year=year
-    ).first()
-    return trend.avg_salary if trend else None
+    try:
+        trend = SalaryTrend.query.filter_by(career_id=career_id,year=int(year)).first()
+        if trend:
+            return{
+                'avg':trend.avg_salary, 
+                'min':trend.min_salary,
+                'max':trend.max_salary
+            } 
+        return None
+    except Exception as e:
+        app.logger.error(f"获取薪资趋势失败：{e}")
+        return None
 
 def calculate_hot_index(career_id):
     """计算职业热度指数"""
-    return 85  # 示例值
-
+    try:
+        career = Career.query.get(career_id)
+        if not career:
+            return 50
+        
+        base_score = 50
+        if getattr(career, 'in_demand', False):
+            base_score += 20
+        if career.avg_entry_salary > 20000:
+            base_score += 15
+        elif career.avg_entry_salary > 15000:
+            base_score += 10
+        elif career.avg_entry_salary > 10000:
+            base_score += 5
+        
+        return min(max(base_score, 0), 100)
+    except Exception as e:
+        app.logger.error(f"计算热度指数失败: {e}")
+        return 50
+#路由，上面是辅助函数
+@api_bp.route('/search/careers', methods=['GET'])
 def search_careers():
     """搜索职业"""
     keyword = request.args.get('q', '').strip()
@@ -693,23 +718,37 @@ def search_careers():
         #关键词搜索
         if keyword:
             query = query.filter(Career.name.ilike(f"%{keyword}%") | Career.description.ilike(f"%{keyword}%"))
-
-        #薪资筛选
+    
+        #分类筛选
         if category:
-           query = query.filter(Career.category == category)
-        if min_salary:
-           query = query.filter(Career.avg_entry_salary >= int(min_salary))
-        if max_salary:
-           query = query.filter(Career.avg_entry_salary <= int(max_salary))
+            query = query.filter(Career.category == category)
         
+        #薪资筛选
+        if min_salary:
+            try:
+                query = query.filter(Career.avg_entry_salary >= int(min_salary))
+            except ValueError:
+                return jsonify({'error': '最低薪资格式错误'}), 400
+        
+        if max_salary:
+            try:
+                query = query.filter(Career.avg_entry_salary <= int(max_salary))
+            except ValueError:
+                return jsonify({'error': '最高薪资格式错误'}), 400
+            
         #年份筛选
         if year:
             try:
-                from app.models import EmploymentRate #employmentRate就业表
-                subquery =db.session,query(EmploymentRate.career_id).filter(EmploymentRate.year == int(year)).subquery()
-                query =query.filter(Career.id.in_(subquery))
+                year_int = int(year)
+                if year_int < 2020 or year_int > 2026:
+                    return jsonify({'error': '年份必须在2020-2026之间'}), 400
+                subquery = db.session.query(EmploymentRate.career_id).filter(EmploymentRate.year == year_int).distinct().subquery()
+                query = query.filter(Career.id.in_(subquery))
+            except ValueError:
+                return jsonify({'error': '年份格式错误'}), 400
             except Exception as e:
-                app.logger.warning(f"年份筛选异常")
+                app.logger.error(f"年份筛选异常: {e}")
+                return jsonify({'error': '年份筛选异常'}), 500
         
         # 排序
         order_column = None
@@ -730,14 +769,28 @@ def search_careers():
         careers = pagination.items 
    
         # 构建响应
-        filter_applied = []
+        message_parts=[]
         if keyword:
-            filter_applied.append(f"关键词：{keyword}")
+            message_parts.append(f"关键词：{keyword}")
+        if category:
+            message_parts.append(f"类别:{category}")
+        if year:
+            message_parts.append(f"年份:{year}")
+        if min_salary or max_salary:
+            salary_range=[]
+            if min_salary:
+                salary_range.append(f"最低:{min_salary}") 
+            if max_salary:
+                salary_range.append(f"最高:{max_salary}") 
+            message_parts.append(f"薪资：{salary_range}")
+        message = '搜索成功'
+        if message_parts:
+            message = "|".join(message_parts)  
 
         #返回结果
         return jsonify(
             {
-                'sucess': True,
+                'success': True,
                 'message': message,
                 'data':{
                     'result':[{
@@ -747,7 +800,7 @@ def search_careers():
                         'avg_entry_salary': career.avg_entry_salary,
                         'employment_trend':get_employment_trend(career.id,year)if year else None,
                         'salary_trend':get_salary_trend(career.id,year)if year else None,
-                        'hot_index':calulate_hot_index(career.id),
+                        'hot_index':calculate_hot_index(career.id),
                         'skills_required': getattr(career, 'skills_required', ''),
                         'in_demand': getattr(career, 'in_demand', False),
                         'description': career.description[:100] + '...' if career.description and len(career.description) > 100 else career.description
