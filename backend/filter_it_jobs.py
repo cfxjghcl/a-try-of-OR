@@ -13,23 +13,15 @@ def is_it_job(job_name, job_category):
     
     # 职位名称中的IT关键词（更严格）
     it_keywords = [
-        # 开发类
-        '后端开发', '前端开发', '全栈开发', '软件工程师', 'java开发', 'python开发',
-        'web开发', '移动开发', 'android开发', 'ios开发', 'app开发',
-        'c++开发', 'c#开发', 'go开发', 'php开发',
-        # 技术岗位
-        '算法工程师', '数据工程师', '数据分析师', '大数据工程师',
-        '测试工程师', 'qa工程师', '测试开发',
-        '运维工程师', 'devops', 'sre', '系统运维', '网络运维',
-        '安全工程师', '网络安全', '信息安全',
-        '数据库管理员', 'dba', '系统架构师',
-        # 特定技术
-        '嵌入式', '单片机', 'fpga', '硬件工程师', 'pcb设计',
-        '通信工程师', '网络工程师', '通信技术',
-        # 设计和产品
-        'ui设计', 'ux设计', '交互设计', '视觉设计', '网页设计',
-        '产品经理', '产品助理', '项目经理', '项目助理'
+        '后端', '前端', '全栈', '开发', '工程师', '架构', '算法',
+        '数据', '分析', '运维', '测试', 'QA', 'DevOps', 'SRE',
+        '机器学习', '人工智能', 'AI', '大数据', '云计算', '区块链',
+        '安全', '网络安全', '信息安全', '软件', '硬件', '嵌入式',
+        'Java', 'Python', 'C++', 'C#', 'Go', 'PHP', 'JavaScript',
+        'Android', 'iOS', '移动开发', 'App开发', 'Web开发',
+        'DBA', '数据库', '系统', '网络', '通信', '物联网'
     ]
+    
     
     # 排除明显非IT的职位（更严格）
     exclude_keywords = [
@@ -41,6 +33,14 @@ def is_it_job(job_name, job_category):
         '管理', '主管', '经理', '总监', '代表', '专员'  # 泛管理职位
     ]
     
+    job_name_lower = job_name.lower() if job_name else ''
+
+    # 检查排除关键词
+    for exclude in exclude_keywords:
+        if exclude.lower() in job_name_lower:
+            return False
+    
+    # 检查IT关键词
     for keyword in it_keywords:
         if keyword.lower() in job_name_lower:
             return True
