@@ -223,3 +223,7 @@ cat >> .gitignore << 'EOF'
 /frontend/*.tsbuildinfo
 /frontend/.DS_Store
 /frontend/.pnpm-store
+backend/data/jobs.json
+backend/data/jobs.zip
+backend/data/jobs.json
+backend/data/jobs.zip
