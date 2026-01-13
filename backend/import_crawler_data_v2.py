@@ -184,7 +184,7 @@ def process_it_job_data():
             if not career:
                 career = Career(
                     name=category,
-                    category="IT/互联网",  # 统一分类
+                    category="开发",  # 统一分类
                     avg_entry_salary=avg_salary,
                     description=description,
                     demand_level= 3,  # 默认中等需求

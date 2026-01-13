@@ -712,7 +712,12 @@ def search_careers():
         query = Career.query
         #关键词搜索
         if keyword:
-            query = query.filter(Career.name.ilike(f"%{keyword}%") | Career.description.ilike(f"%{keyword}%"))
+            query = query.filter(db.or_(
+                Career.name.like(f"%{keyword}%"),
+                Career.description.like(f"%{keyword}%"),
+                Career.required_skills.like(f"%{keyword}%"),
+                Career.category.like(f"%{keyword}%")
+            ))
     
         #分类筛选
         if category:
@@ -737,7 +742,7 @@ def search_careers():
                 year_int = int(year)
                 if year_int < 2020 or year_int > 2026:
                     return jsonify({'error': '年份必须在2020-2026之间'}), 400
-                subquery = db.session.query(EmploymentRate.career_id).filter(EmploymentRate.year == year_int).distinct().subquery()
+                subquery = db.session.query(EmploymentRate.career_id).filter(EmploymentRate.year == year_int).subquery()
                 query = query.filter(Career.id.in_(subquery))
             except ValueError:
                 return jsonify({'error': '年份格式错误'}), 400
