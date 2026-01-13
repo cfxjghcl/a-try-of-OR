@@ -1,25 +1,16 @@
-import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import path from 'path'
 
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
+      '@': path.resolve(__dirname, './src') // 配置@别名，确保路由里的@/xxx路径生效
+    }
   },
   server: {
-    // 代理配置，解决CORS问题
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5000', // 后端服务器地址
-        changeOrigin: true,
-      }
-    },
-    // 只监听localhost，避免防火墙警告
-    host: 'localhost',
-    port: 5173,
-    open: false
+    open: '/professional-nav' // 启动项目后自动打开 professional-nav 页面
   }
 })

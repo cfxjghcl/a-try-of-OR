@@ -1,25 +1,34 @@
-﻿<template>
-  <div id="app">
-    <!-- 最简导航 -->
-    <div style="background: #4a6fa5; padding: 15px 20px; color: white; font-weight: bold;">
-      技术栈热度分析系统
-    </div>
-    
-    <div style="padding: 20px;">
-      <router-view />
-    </div>
-  </div>
+<template>
+  <!-- 仅保留路由出口：所有页面（职业导航）都会渲染在这里 -->
+  <router-view />
 </template>
 
-<script>
-export default {
-  name: 'App'
-}
+<script setup>
+// 空脚本：无需任何代码，不影响页面渲染
 </script>
 
-<style>
-body {
+<style scoped>
+/* 仅保留全局基础样式，保证页面布局正常 */
+* {
   margin: 0;
-  font-family: Arial, sans-serif;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Microsoft Yahei", sans-serif;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+/* 清除默认链接样式（如果有） */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 清除默认列表样式 */
+ul, li {
+  list-style: none;
 }
 </style>
