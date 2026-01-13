@@ -497,27 +497,22 @@ def recommend_careers():
         careers = Career.query.order_by(Career.avg_entry_salary.desc()).limit(5).all()
     else:
         if user.target_career:
-            target_career = Career.query.filter(
-                Career.name.ilike(f"%{user.target_career}%")
-            ).first()
-            
+            target_career = Career.query.filter(Career.name.ilike(f"%{user.target_career}%")).first()
+
             if target_career:
                 # 找同类别或相似薪资的职业
                 careers = Career.query.filter(
-                    (Career.category == target_career.category) |
-                    (Career.avg_entry_salary.between(
-                        target_career.avg_entry_salary * 0.8,
-                        target_career.avg_entry_salary * 1.2
-                    ))
-                ).limit(5).all()
+                    (Career.category == target_career.category) |(Career.avg_entry_salary.between(
+                        target_career.avg_entry_salary * 0.8,target_career.avg_entry_salary * 1.2))).limit(5).all()
             else:
                 # 默认返回
                 careers = Career.query.order_by(Career.avg_entry_salary.desc()).limit(5).all()
         else:
-            # 根据专业推荐（可扩展）
+            # 根据专业推荐(可扩展)
             careers = Career.query.order_by(Career.avg_entry_salary.desc()).limit(5).all()
     
     return jsonify({
+        'success': True,
         'recommendations': [
             {
                 'id': career.id,
@@ -525,7 +520,7 @@ def recommend_careers():
                 'category': career.category,
                 'description': career.description,
                 'avg_entry_salary': career.avg_entry_salary,
-                'demand_level': career.demand_level,
+                'in_demand': getattr(career, 'in_demand', False),
                 'match_reason': '根据您的专业和目标职业推荐'  
             }
             for career in careers
@@ -655,7 +650,7 @@ def get_employment_trend(career_id, year):
         trend = EmploymentRate.query.filter_by(career_id=career_id,year=int(year)).first()
         return trend.employment_rate if trend else None
     except Exception as e:
-        app.logger.error(f"获取就业趋势失败：{e}")
+        current_app.logger.error(f"获取就业趋势失败：{e}")
         return None
 
 def get_salary_trend(career_id, year):
@@ -670,7 +665,7 @@ def get_salary_trend(career_id, year):
             } 
         return None
     except Exception as e:
-        app.logger.error(f"获取薪资趋势失败：{e}")
+        current_app.logger.error(f"获取薪资趋势失败：{e}")
         return None
 
 def calculate_hot_index(career_id):
@@ -692,7 +687,7 @@ def calculate_hot_index(career_id):
         
         return min(max(base_score, 0), 100)
     except Exception as e:
-        app.logger.error(f"计算热度指数失败: {e}")
+        current_app.logger.error(f"计算热度指数失败: {e}")
         return 50
 #路由，上面是辅助函数
 @api_bp.route('/search/careers', methods=['GET'])
@@ -747,7 +742,7 @@ def search_careers():
             except ValueError:
                 return jsonify({'error': '年份格式错误'}), 400
             except Exception as e:
-                app.logger.error(f"年份筛选异常: {e}")
+                current_app.logger.error(f"年份筛选异常: {e}")
                 return jsonify({'error': '年份筛选异常'}), 500
         
         # 排序
@@ -755,8 +750,12 @@ def search_careers():
     
         if sort_by == 'name':
            order_column = Career.name
+        elif sort_by == 'salary':
+            order_column = Career.avg_entry_salary
+        elif sort_by == 'hot_index':
+            order_column = Career.in_demand
         else:
-           order_column = Career.avg_entry_salary  # 默认按薪资排序
+            order_column = Career.avg_entry_salary  # 默认按薪资排序
 
         if order_column is not None:
            if order == 'asc':
@@ -824,7 +823,7 @@ def search_careers():
                     'order': order
                 }}}), 200
     except Exception as e:
-        app.logger.error(f"搜索失败：{str(e)}")
+        current_app.logger.error(f"搜索失败：{str(e)}")
         return jsonify({
             'success':False,
             'error':"搜索失败",

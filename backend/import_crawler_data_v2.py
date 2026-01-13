@@ -187,6 +187,8 @@ def process_it_job_data():
                     category="IT/互联网",  # 统一分类
                     avg_entry_salary=avg_salary,
                     description=description,
+                    demand_level= 3,  # 默认中等需求
+                    required_skills=', '.join(stats['skills']),
                     in_demand=stats['count'] >= 2  # 有2个以上职位算需求高
                 )
                 db.session.add(career)

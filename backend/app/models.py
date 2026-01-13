@@ -93,8 +93,11 @@ class Career(db.Model):
     description = db.Column(db.Text)
     required_skills = db.Column(db.Text)
     avg_entry_salary = db.Column(db.Integer)
-    demand_level = db.Column(db.String(20))
+    in_demand = db.Column(db.Boolean, default=True)
+    demand_level = db.Column(db.Integer, default=3)  # 1-5级
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 
     favorite_by = db.relationship('User', secondary='user_favorites', backref='favorite_careers')
 
@@ -137,5 +140,6 @@ class Skill(db.Model):
     importance_level = db.Column(db.Integer, default=3)  
     is_required = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     career = db.relationship('Career', backref=db.backref('skills', lazy=True))
